@@ -31,8 +31,9 @@
 #define DEFINE_LPCREATETYPEINFO
 #define DEFINED_LPDISPATCH
 
-#include <glib.h>
 #include <gdk/gdk.h>
+#include <glib.h>
+#include <gtk/gtk.h>
 #include "hsgthread.h"
 
 #if defined( WIN32 )
@@ -110,10 +111,11 @@ void gtk2hs_threads_initialise (void) {
 
     gdk_threads_set_lock_functions(imp_rec_lock, imp_rec_unlock);
 #endif
-    gdk_threads_init();
-
     /* from here onwards, the Gdk lock is held */
+#if !GTK_CHECK_VERSION(3,6,0)
+    gdk_threads_init();
     gdk_threads_enter();
+#endif
 
   }
 }
@@ -187,7 +189,9 @@ gboolean gtk2hs_run_finalizers(gpointer data) {
   gint index;
   g_assert(gtk2hs_finalizers!=NULL);
 
+#if !GTK_CHECK_VERSION(3,6,0)
   gdk_threads_enter();
+#endif
 
   int mutex_locked = 0;
   if (threads_initialised) {
@@ -224,8 +228,9 @@ gboolean gtk2hs_run_finalizers(gpointer data) {
 #endif
   }
 
+#if !GTK_CHECK_VERSION(3,6,0)
   gdk_threads_leave();
+#endif
 
   return FALSE;
 }
-
