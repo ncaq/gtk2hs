@@ -1,106 +1,75 @@
 {-# LANGUAGE CPP, ViewPatterns #-}
 -- | Build a Gtk2hs package.
---
-module Gtk2HsSetup (
-  gtk2hsUserHooks,
-  getPkgConfigPackages,
-  checkGtk2hsBuildtools,
-  typeGenProgram,
-  signalGenProgram,
-  c2hsLocal
+module Gtk2HsSetup
+  ( gtk2hsUserHooks
+  , getPkgConfigPackages
+  , checkGtk2hsBuildtools
+  , typeGenProgram
+  , signalGenProgram
+  , c2hsLocal
   ) where
 
-import Data.String(fromString)
-import Data.Maybe (mapMaybe)
-import Distribution.Simple
-import Distribution.Simple.PreProcess
-import Distribution.InstalledPackageInfo ( importDirs,
-                                           showInstalledPackageInfo,
-                                           libraryDirs,
-                                           extraLibraries,
-                                           extraGHCiLibraries )
-import Distribution.Simple.PackageIndex ( lookupUnitId )
-import Distribution.PackageDescription as PD ( PackageDescription(..),
-                                               updatePackageDescription,
-                                               BuildInfo(..),
-                                               emptyBuildInfo, allBuildInfo,
-                                               Library(..),
-                                               explicitLibModules, hasLibs)
-import Distribution.Simple.LocalBuildInfo (LocalBuildInfo(..), buildDir,
-                                           InstallDirs(..),
-                                           ComponentLocalBuildInfo,
-                                           componentPackageDeps,
-                                           absoluteInstallDirs,
-                                           relocatable,
-                                           compiler)
-import Distribution.Types.LocalBuildInfo as LBI (componentNameCLBIs)
-import qualified Distribution.Types.LocalBuildInfo as LBI
-import Distribution.Simple.Compiler  ( Compiler(..) )
-import Distribution.Simple.Program (
-  Program(..), ConfiguredProgram(..),
-  runDbProgram, getDbProgramOutput, programName, programPath,
-  c2hsProgram, pkgConfigProgram, gccProgram, requireProgram, ghcPkgProgram,
-  simpleProgram, lookupProgram, getProgramOutput, ProgArg)
-import Distribution.Simple.Program.HcPkg ( defaultRegisterOptions )
-import Distribution.Types.PkgconfigDependency ( PkgconfigDependency(..) )
-import Distribution.Types.PkgconfigName
-import Distribution.ModuleName ( ModuleName, components, toFilePath )
-import Distribution.Simple.Utils hiding (die)
-import Distribution.Simple.BuildPaths ( autogenPackageModulesDir )
-import Distribution.Simple.Install ( install )
-import Distribution.Simple.Register ( generateRegistrationInfo, registerPackage )
-import Distribution.Text ( simpleParse, display )
-import System.FilePath
-import System.Exit (die, exitFailure)
-import System.Directory ( doesFileExist, getDirectoryContents, doesDirectoryExist )
-import Distribution.Version (Version(..))
-import Distribution.Verbosity
-import Control.Monad (when, unless, filterM, liftM, forM, forM_)
-import Data.Maybe ( isJust, isNothing, fromMaybe, maybeToList, catMaybes )
-import Data.List (isPrefixOf, isSuffixOf, nub, minimumBy, stripPrefix, tails )
-import Data.Ord as Ord (comparing)
-import Data.Char (isAlpha, isNumber)
-import qualified Data.Map as M
-import qualified Data.Set as S
-import qualified Distribution.PackageDescription as PD
-import qualified Distribution.Simple.LocalBuildInfo as LBI
-import qualified Distribution.InstalledPackageInfo as IPI
-       (installedUnitId)
-import Distribution.Simple.Compiler (compilerVersion)
-import qualified Distribution.Compat.Graph as Graph
-import Control.Applicative ((<$>))
-import Distribution.Simple.Program.Find ( defaultProgramSearchPath )
-import Gtk2HsC2Hs (c2hsMain)
-import HookGenerator (hookGen)
-import TypeGen (typeGen)
-import UNames (unsafeResetRootNameSupply)
+import           Control.Applicative
+import           Control.Monad
+import           Data.Char                              (isAlpha, isNumber)
+import           Data.List                              (isPrefixOf, isSuffixOf,
+                                                         minimumBy, nub,
+                                                         stripPrefix, tails)
+import qualified Data.Map                               as M
+import           Data.Maybe
+import           Data.Ord                               as Ord
+import qualified Data.Set                               as S
+import           Data.String
+import qualified Distribution.Compat.Graph              as Graph
+import           Distribution.InstalledPackageInfo
+import qualified Distribution.InstalledPackageInfo      as IPI
+import           Distribution.ModuleName                (ModuleName, components,
+                                                         toFilePath)
+import           Distribution.PackageDescription        as PD
+import qualified Distribution.PackageDescription        as PD
+import           Distribution.Simple
+import           Distribution.Simple.BuildPaths         (autogenPackageModulesDir)
+import           Distribution.Simple.Compiler           (Compiler (..),
+                                                         compilerVersion)
+import           Distribution.Simple.Install            (install)
+import           Distribution.Simple.LocalBuildInfo     as LBI
+import           Distribution.Simple.PackageIndex       (lookupUnitId)
+import           Distribution.Simple.PreProcess
+import           Distribution.Simple.Program
+import           Distribution.Simple.Program.Find       (defaultProgramSearchPath)
+import           Distribution.Simple.Program.HcPkg      (defaultRegisterOptions)
+import           Distribution.Simple.Register           (generateRegistrationInfo,
+                                                         registerPackage)
+import           Distribution.Simple.Utils              hiding (die)
+import           Distribution.Text                      (display, simpleParse)
+import qualified Distribution.Types.LocalBuildInfo      as LBI
+import           Distribution.Types.PkgconfigDependency (PkgconfigDependency (..))
+import           Distribution.Types.PkgconfigName
+import           Distribution.Verbosity
+import           Distribution.Version                   (Version (..))
+import           Gtk2HsC2Hs                             (c2hsMain)
+import           HookGenerator                          (hookGen)
+import           System.Directory
+import           System.Exit                            (die, exitFailure)
+import           System.FilePath
+import           TypeGen                                (typeGen)
+import           UNames                                 (unsafeResetRootNameSupply)
+import           Distribution.Simple.Setup
 
 #if MIN_VERSION_Cabal(2,4,0)
-import Distribution.Pretty (prettyShow)
+import           Distribution.Pretty                    (prettyShow)
 #else
-import Distribution.Simple.LocalBuildInfo (getComponentLocalBuildInfo)
+import           Distribution.Simple.LocalBuildInfo     (getComponentLocalBuildInfo)
 #endif
 
 #if MIN_VERSION_Cabal(3,6,0)
-import Distribution.Utils.Path (getSymbolicPath)
+import           Distribution.Utils.Path                (getSymbolicPath)
 #endif
 
 #if MIN_VERSION_Cabal(3,14,0)
-import Data.Bifunctor (bimap)
-import Distribution.Utils.Path (getSymbolicPath, makeRelativePathEx)
-#endif
-
-#if MIN_VERSION_Cabal(3,14,0)
-import Distribution.Simple.Setup (CommonSetupFlags(..), CopyFlags(..), InstallFlags(..),
-                                  CopyDest(..), defaultCommonSetupFlags, defaultCopyFlags,
-                                  ConfigFlags(configVerbosity), fromFlag, toFlag,
-                                  RegisterFlags(..), flagToMaybe, fromFlagOrDefault,
-                                  defaultRegisterFlags)
-#else
-import Distribution.Simple.Setup (CopyFlags(..), InstallFlags(..), CopyDest(..),
-                                  defaultCopyFlags, ConfigFlags(configVerbosity),
-                                  fromFlag, toFlag, RegisterFlags(..), flagToMaybe,
-                                  fromFlagOrDefault, defaultRegisterFlags)
+import           Data.Bifunctor                         (bimap)
+import           Distribution.Utils.Path                (getSymbolicPath,
+                                                         makeRelativePathEx)
 #endif
 
 onDefaultSearchPath f a b = f a b defaultProgramSearchPath
