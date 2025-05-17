@@ -149,7 +149,7 @@ fixLibs dlls = concatMap $ \ lib ->
 installHook :: PackageDescription -> LocalBuildInfo
                    -> UserHooks -> InstallFlags -> IO ()
 installHook pkg_descr localbuildinfo _ flags = do
-# if MIN_VERSION_Cabal(3,14,0)
+#if MIN_VERSION_Cabal(3,14,0)
   let copyFlags = defaultCopyFlags {
                         copyCommonFlags = defaultCommonSetupFlags {
                           setupDistPref = installDistPref flags,
