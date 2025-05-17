@@ -89,7 +89,7 @@ libraryConfig lbi = case [clbi | (LBI.CLibName _, clbi, _) <- componentsConfigs 
 libraryConfig lbi = case [clbi | (LBI.CLibName, clbi, _) <- LBI.componentsConfigs lbi] of
 #endif
   [clbi] -> Just clbi
-  _ -> Nothing
+  _      -> Nothing
 
 -- the name of the c2hs pre-compiled header file
 precompFile = "precompchs.bin"
@@ -503,7 +503,7 @@ fixDeps pd@PD.PackageDescription {
   }}
 
 data ModDep = ModDep {
-  mdExposed :: Bool,
+  mdExposed  :: Bool,
   mdRequires :: [ModuleName],
   mdOriginal :: ModuleName,
   mdLocation :: Maybe FilePath
