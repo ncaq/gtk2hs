@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP, ViewPatterns #-}
+{-# LANGUAGE CPP #-}
 -- | Build a Gtk2hs package.
 module Gtk2HsSetup
   ( gtk2hsUserHooks
