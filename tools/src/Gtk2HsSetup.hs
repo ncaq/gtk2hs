@@ -49,11 +49,9 @@ import Distribution.Simple.Program (
   runDbProgram, getDbProgramOutput, programName, programPath,
   c2hsProgram, pkgConfigProgram, gccProgram, requireProgram, ghcPkgProgram,
   simpleProgram, lookupProgram, getProgramOutput, ProgArg)
-#if MIN_VERSION_Cabal(2,0,0)
 import Distribution.Simple.Program.HcPkg ( defaultRegisterOptions )
 import Distribution.Types.PkgconfigDependency ( PkgconfigDependency(..) )
 import Distribution.Types.PkgconfigName
-#endif
 import Distribution.ModuleName ( ModuleName, components, toFilePath )
 import Distribution.Simple.Utils hiding (die)
 #if MIN_VERSION_Cabal(3,14,0)
@@ -68,9 +66,7 @@ import Distribution.Simple.Setup (CopyFlags(..), InstallFlags(..), CopyDest(..),
                                   fromFlag, toFlag, RegisterFlags(..), flagToMaybe,
                                   fromFlagOrDefault, defaultRegisterFlags)
 #endif
-#if MIN_VERSION_Cabal(2,0,0)
 import Distribution.Simple.BuildPaths ( autogenPackageModulesDir )
-#endif
 import Distribution.Simple.Install ( install )
 #if MIN_VERSION_Cabal(3,14,0)
 import Distribution.Utils.Path (getSymbolicPath, makeRelativePathEx)
@@ -107,11 +103,6 @@ import HookGenerator (hookGen)
 import TypeGen (typeGen)
 import UNames (unsafeResetRootNameSupply)
 
-#if !MIN_VERSION_Cabal(2,0,0)
-versionNumbers :: Version -> [Int]
-versionNumbers = versionBranch
-#endif
-
 onDefaultSearchPath f a b = f a b defaultProgramSearchPath
 #if MIN_VERSION_Cabal(2,5,0)
 componentsConfigs :: LocalBuildInfo -> [(LBI.ComponentName, ComponentLocalBuildInfo, [LBI.ComponentName])]
@@ -138,8 +129,6 @@ gtk2hsUserHooks = simpleUserHooks {
     -- hookedPrograms is only included for backwards compatibility with older Setup.hs.
     hookedPrograms = [typeGenProgram, signalGenProgram, c2hsLocal],
     hookedPreProcessors = [(fromString "chs", ourC2hs)],
-    confHook = \pd cf ->
-      (fmap adjustLocalBuildInfo (confHook simpleUserHooks pd cf)),
     postConf = \args cf pd lbi -> do
       genSynthezisedFiles (fromFlag (configVerbosity cf)) pd lbi
       postConf simpleUserHooks args cf pd lbi,
@@ -292,12 +281,7 @@ register pkg@PackageDescription { library       = Just lib  } lbi regFlags
 #else
            registerPackage verbosity (compiler lbi) (withPrograms lbi)
 #endif
-#if MIN_VERSION_Cabal(2,0,0)
              packageDbs installedPkgInfo defaultRegisterOptions
-#else
-             False packageDbs installedPkgInfo
-#endif
-
   where
     modeGenerateRegFile = isJust (flagToMaybe (regGenPkgConf regFlags))
 #if MIN_VERSION_Cabal(3,14,0)
@@ -332,32 +316,11 @@ register _ _ regFlags = notice verbosity "No package to register"
 #endif
 
 ------------------------------------------------------------------------------
--- This is a hack for Cabal-1.8, It is not needed in Cabal-1.9.1 or later
-------------------------------------------------------------------------------
-
-#if MIN_VERSION_Cabal(2,0,0)
-adjustLocalBuildInfo :: LocalBuildInfo -> LocalBuildInfo
-adjustLocalBuildInfo = id
-#else
-adjustLocalBuildInfo :: LocalBuildInfo -> LocalBuildInfo
-adjustLocalBuildInfo lbi =
-  let extra = (Just libBi, [])
-      libBi = emptyBuildInfo { includeDirs = [ autogenPackageModulesDir lbi
-                                             , buildDir lbi ] }
-   in lbi { localPkgDescr = updatePackageDescription extra (localPkgDescr lbi) }
-#endif
-
-------------------------------------------------------------------------------
 -- Processing .chs files with our local c2hs.
 ------------------------------------------------------------------------------
 
-#if MIN_VERSION_Cabal(2,0,0)
 ourC2hs :: BuildInfo -> LocalBuildInfo -> ComponentLocalBuildInfo -> PreProcessor
 ourC2hs bi lbi _ = PreProcessor {
-#else
-ourC2hs :: BuildInfo -> LocalBuildInfo -> PreProcessor
-ourC2hs bi lbi = PreProcessor {
-#endif
 #if MIN_VERSION_Cabal(3,8,1)
   ppOrdering = \_ _ ms -> return ms,
 #endif
@@ -450,12 +413,8 @@ genSynthezisedFiles verb pd lbi = do
                               tag `isPrefixOf` field,
                               field /= (tag++"file")]
               ++ [ "--tag=" ++ tag
-#if MIN_VERSION_Cabal(2,0,0)
                  | PackageIdentifier name version <- cPkgs
                  , let major:minor:_ = versionNumbers version
-#else
-                 | PackageIdentifier name (Version (major:minor:_) _) <- cPkgs
-#endif
                  , let name' = filter isAlpha (display name)
                  , tag <- name'
                         :[ name' ++ "-" ++ show maj ++ "." ++ show d2
@@ -519,13 +478,8 @@ getPkgConfigPackages verbosity lbi pkg =
     [ do version <- pkgconfig ["--modversion", display pkgname]
          case simpleParse version of
            Nothing -> die "parsing output of pkg-config --modversion failed"
-#if MIN_VERSION_Cabal(2,0,0)
            Just v  -> return (PackageIdentifier (mkPackageName $ unPkgconfigName pkgname) v)
     | PkgconfigDependency pkgname _
-#else
-           Just v  -> return (PackageIdentifier pkgname v)
-    | Dependency pkgname _
-#endif
     <- concatMap pkgconfigDepends (allBuildInfo pkg) ]
   where
     pkgconfig = getDbProgramOutput verbosity
@@ -656,9 +610,5 @@ signalGenProgram = simpleProgram "gtk2hsHookGenerator"
 c2hsLocal :: Program
 c2hsLocal = (simpleProgram "gtk2hsC2hs") {
     programFindVersion = \_ _ -> return . Just $
-#if MIN_VERSION_Cabal(2,0,0)
       mkVersion [0,13,13]
-#else
-      Version [0,13,13] []
-#endif
   }
