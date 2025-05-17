@@ -12,14 +12,6 @@ module Gtk2HsSetup (
 
 import Data.String(fromString)
 import Data.Maybe (mapMaybe)
-#if MIN_VERSION_Cabal(3,14,0)
-import Data.Bifunctor (bimap)
-#endif
-#if MIN_VERSION_Cabal(2,4,0)
-import Distribution.Pretty (prettyShow)
-#else
-import Distribution.Simple.LocalBuildInfo (getComponentLocalBuildInfo)
-#endif
 import Distribution.Simple
 import Distribution.Simple.PreProcess
 import Distribution.InstalledPackageInfo ( importDirs,
@@ -54,23 +46,8 @@ import Distribution.Types.PkgconfigDependency ( PkgconfigDependency(..) )
 import Distribution.Types.PkgconfigName
 import Distribution.ModuleName ( ModuleName, components, toFilePath )
 import Distribution.Simple.Utils hiding (die)
-#if MIN_VERSION_Cabal(3,14,0)
-import Distribution.Simple.Setup (CommonSetupFlags(..), CopyFlags(..), InstallFlags(..),
-                                  CopyDest(..), defaultCommonSetupFlags, defaultCopyFlags,
-                                  ConfigFlags(configVerbosity), fromFlag, toFlag,
-                                  RegisterFlags(..), flagToMaybe, fromFlagOrDefault,
-                                  defaultRegisterFlags)
-#else
-import Distribution.Simple.Setup (CopyFlags(..), InstallFlags(..), CopyDest(..),
-                                  defaultCopyFlags, ConfigFlags(configVerbosity),
-                                  fromFlag, toFlag, RegisterFlags(..), flagToMaybe,
-                                  fromFlagOrDefault, defaultRegisterFlags)
-#endif
 import Distribution.Simple.BuildPaths ( autogenPackageModulesDir )
 import Distribution.Simple.Install ( install )
-#if MIN_VERSION_Cabal(3,14,0)
-import Distribution.Utils.Path (getSymbolicPath, makeRelativePathEx)
-#endif
 import Distribution.Simple.Register ( generateRegistrationInfo, registerPackage )
 import Distribution.Text ( simpleParse, display )
 import System.FilePath
@@ -91,17 +68,40 @@ import qualified Distribution.InstalledPackageInfo as IPI
        (installedUnitId)
 import Distribution.Simple.Compiler (compilerVersion)
 import qualified Distribution.Compat.Graph as Graph
-#if MIN_VERSION_Cabal(3,6,0)
-import Distribution.Utils.Path (getSymbolicPath)
-#endif
-
 import Control.Applicative ((<$>))
-
 import Distribution.Simple.Program.Find ( defaultProgramSearchPath )
 import Gtk2HsC2Hs (c2hsMain)
 import HookGenerator (hookGen)
 import TypeGen (typeGen)
 import UNames (unsafeResetRootNameSupply)
+
+#if MIN_VERSION_Cabal(2,4,0)
+import Distribution.Pretty (prettyShow)
+#else
+import Distribution.Simple.LocalBuildInfo (getComponentLocalBuildInfo)
+#endif
+
+#if MIN_VERSION_Cabal(3,6,0)
+import Distribution.Utils.Path (getSymbolicPath)
+#endif
+
+#if MIN_VERSION_Cabal(3,14,0)
+import Data.Bifunctor (bimap)
+import Distribution.Utils.Path (getSymbolicPath, makeRelativePathEx)
+#endif
+
+#if MIN_VERSION_Cabal(3,14,0)
+import Distribution.Simple.Setup (CommonSetupFlags(..), CopyFlags(..), InstallFlags(..),
+                                  CopyDest(..), defaultCommonSetupFlags, defaultCopyFlags,
+                                  ConfigFlags(configVerbosity), fromFlag, toFlag,
+                                  RegisterFlags(..), flagToMaybe, fromFlagOrDefault,
+                                  defaultRegisterFlags)
+#else
+import Distribution.Simple.Setup (CopyFlags(..), InstallFlags(..), CopyDest(..),
+                                  defaultCopyFlags, ConfigFlags(configVerbosity),
+                                  fromFlag, toFlag, RegisterFlags(..), flagToMaybe,
+                                  fromFlagOrDefault, defaultRegisterFlags)
+#endif
 
 onDefaultSearchPath f a b = f a b defaultProgramSearchPath
 #if MIN_VERSION_Cabal(2,5,0)
