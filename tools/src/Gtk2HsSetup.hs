@@ -215,18 +215,18 @@ installHook pkg_descr localbuildinfo _ flags = do
 #endif
   when (hasLibs pkg_descr) $ register pkg_descr localbuildinfo registerFlags
 
-registerHook :: PackageDescription -> LocalBuildInfo
-        -> UserHooks -> RegisterFlags -> IO ()
+registerHook :: PackageDescription -> LocalBuildInfo -> UserHooks -> RegisterFlags -> IO ()
 registerHook pkg_descr localbuildinfo _ flags =
-    if hasLibs pkg_descr
-    then register pkg_descr localbuildinfo flags
-    else setupMessage verbosity
-           "Package contains no library to register:" (packageId pkg_descr)
+  if hasLibs pkg_descr
+  then register pkg_descr localbuildinfo flags
+  else setupMessage verbosity "Package contains no library to register:" (packageId pkg_descr)
+  where
 #if MIN_VERSION_Cabal(3,14,0)
-  where verbosity = fromFlag (setupVerbosity . registerCommonFlags $ flags)
+    verbosity = fromFlag (setupVerbosity . registerCommonFlags $ flags)
 #else
-  where verbosity = fromFlag (regVerbosity flags)
+    verbosity = fromFlag (regVerbosity flags)
 #endif
+
 #if MIN_VERSION_Cabal(2,4,0)
 getComponentLocalBuildInfo :: LocalBuildInfo -> LBI.ComponentName -> ComponentLocalBuildInfo
 getComponentLocalBuildInfo lbi cname =
