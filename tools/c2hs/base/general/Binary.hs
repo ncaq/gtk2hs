@@ -653,7 +653,7 @@ getBinFileWithDict file_path = do
 
         -- Initialise the user-data field of bh
   let bh' = setUserData bh (initReadState dict)
-        
+
         -- At last, get the thing
   get bh'
 

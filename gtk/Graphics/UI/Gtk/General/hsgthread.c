@@ -73,12 +73,12 @@ void gtk2hs_initialise (void) {
 	/* Some Windows GTK binaries (current Fedora MinGW ones) do */
 	/* not open files in binary mode.  This is a work around.    */
     HANDLE handle = LoadLibrary("MSVCRT.dll");
-    if(!handle) { 
+    if(!handle) {
         fprintf(stderr, "Warning: failed to load MSVCRT.dll, ");
         fprintf(stderr, "binary mode was not set!\n");
         return;
     }
-    
+
     int *_fmode_ptr = GetProcAddress(handle, "_fmode");
     if(!_fmode_ptr) {
         fprintf(stderr, "Warning: failed to load address of _fmode from MSVCRT.dll, ");
@@ -107,7 +107,7 @@ void gtk2hs_threads_initialise (void) {
 
 #if defined( WIN32 ) && GLIB_CHECK_VERSION(2,32,0)
     g_rec_mutex_init(&recursive_mutex);
-    
+
     gdk_threads_set_lock_functions(imp_rec_lock, imp_rec_unlock);
 #endif
     gdk_threads_init();
@@ -188,7 +188,7 @@ gboolean gtk2hs_run_finalizers(gpointer data) {
   g_assert(gtk2hs_finalizers!=NULL);
 
   gdk_threads_enter();
-	
+
   int mutex_locked = 0;
   if (threads_initialised) {
 #ifdef DEBUG

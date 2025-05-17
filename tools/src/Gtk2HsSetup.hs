@@ -57,10 +57,10 @@ import Distribution.Types.PkgconfigName
 import Distribution.ModuleName ( ModuleName, components, toFilePath )
 import Distribution.Simple.Utils hiding (die)
 #if MIN_VERSION_Cabal(3,14,0)
-import Distribution.Simple.Setup (CommonSetupFlags(..), CopyFlags(..), InstallFlags(..), 
-                                  CopyDest(..), defaultCommonSetupFlags, defaultCopyFlags, 
-                                  ConfigFlags(configVerbosity), fromFlag, toFlag, 
-                                  RegisterFlags(..), flagToMaybe, fromFlagOrDefault, 
+import Distribution.Simple.Setup (CommonSetupFlags(..), CopyFlags(..), InstallFlags(..),
+                                  CopyDest(..), defaultCommonSetupFlags, defaultCopyFlags,
+                                  ConfigFlags(configVerbosity), fromFlag, toFlag,
+                                  RegisterFlags(..), flagToMaybe, fromFlagOrDefault,
                                   defaultRegisterFlags)
 #else
 import Distribution.Simple.Setup (CopyFlags(..), InstallFlags(..), CopyDest(..),
@@ -97,7 +97,7 @@ import Distribution.Simple.Compiler (compilerVersion)
 import qualified Distribution.Compat.Graph as Graph
 #if MIN_VERSION_Cabal(3,6,0)
 import Distribution.Utils.Path (getSymbolicPath)
-#endif 
+#endif
 
 import Control.Applicative ((<$>))
 
@@ -192,12 +192,12 @@ installHook :: PackageDescription -> LocalBuildInfo
                    -> UserHooks -> InstallFlags -> IO ()
 installHook pkg_descr localbuildinfo _ flags = do
 # if MIN_VERSION_Cabal(3,14,0)
-  let copyFlags = defaultCopyFlags { 
+  let copyFlags = defaultCopyFlags {
                         copyCommonFlags = defaultCommonSetupFlags {
                           setupDistPref = installDistPref flags,
                           setupVerbosity = installVerbosity flags
                         },
-                        copyDest = toFlag NoCopyDest 
+                        copyDest = toFlag NoCopyDest
                    }
 #else
   let copyFlags = defaultCopyFlags {
@@ -547,12 +547,12 @@ fixDeps pd@PD.PackageDescription {
               PD.hsSourceDirs = srcDirs,
               PD.otherModules = othMods
             }}} = do
-  let toPath = 
+  let toPath =
 #if MIN_VERSION_Cabal(3,6,0)
         getSymbolicPath
-#else 
-        id 
-#endif 
+#else
+        id
+#endif
 #if MIN_VERSION_Cabal(3,14,0)
   let findModule m = findFileWithExtension [fromString ".chs.pp", fromString ".chs"] srcDirs
                        (makeRelativePathEx . toFilePath $ m)
@@ -565,7 +565,7 @@ fixDeps pd@PD.PackageDescription {
 
   -- tag all exposed files with True so we throw an error if we need to build
   -- an exposed module before an internal modules (we cannot express this)
-#if MIN_VERSION_Cabal(3,14,0)  
+#if MIN_VERSION_Cabal(3,14,0)
   let modDeps = zipWith (ModDep True []) expMods (map (getSymbolicPath <$>) mExpFiles) ++
                 zipWith (ModDep False []) othMods (map (getSymbolicPath <$>) mOthFiles)
 #else
