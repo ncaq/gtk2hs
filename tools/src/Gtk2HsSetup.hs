@@ -128,7 +128,7 @@ fixLibs :: [FilePath] -> [String] -> [String]
 fixLibs dlls = concatMap $ \ lib ->
     case filter (isLib lib) dlls of
                 dlls@(_:_) -> [dropExtension (pickDll dlls)]
-                _          -> if lib == "z" then [] else [lib]
+                _          -> [lib | lib /= "z"]
   where
     -- If there are several .dll files matching the one we're after then we
     -- just have to guess. For example for recent Windows cairo builds we get
@@ -231,7 +231,7 @@ register pkg@PackageDescription { library       = Just lib  } lbi regFlags
                            verbosity pkg lib lbi clbi inplace reloc distPref
                            (registrationPackageDB absPackageDBs)
 
-    dllsInScope <- getSearchPath >>= (filterM doesDirectoryExist) >>= getDlls
+    dllsInScope <- getSearchPath >>= filterM doesDirectoryExist >>= getDlls
     let libs = fixLibs dllsInScope (extraLibraries installedPkgInfoRaw)
         installedPkgInfo = installedPkgInfoRaw {
                                 extraGHCiLibraries = libs }
@@ -358,9 +358,9 @@ installCHI pkg@PD.PackageDescription { library = Just lib } lbi verbosity copyde
 #endif
 
 #if MIN_VERSION_Cabal(3,14,0)
-  let files = [ bimap getSymbolicPath getSymbolicPath $ f | Just f <- mFiles ]
+  let files = map (bimap getSymbolicPath getSymbolicPath) $ catMaybes mFiles
 #else
-  let files = [ f | Just f <- mFiles ]
+  let files = catMaybes mFiles
 #endif
   installOrdinaryFiles verbosity libPref files
 
@@ -496,7 +496,7 @@ fixDeps pd@PD.PackageDescription {
                 zipWith (ModDep False []) othMods mOthFiles
 #endif
   modDeps <- mapM extractDeps modDeps
-  let (othMods, expMods) = span (not . mdExposed) $ reverse $ sortTopological modDeps
+  let (othMods, expMods) = break mdExposed $ reverse $ sortTopological modDeps
   return pd { PD.library = Just lib {
     PD.exposedModules = map mdOriginal (reverse expMods),
     PD.libBuildInfo = bi { PD.otherModules = map mdOriginal (reverse othMods) }
@@ -523,7 +523,7 @@ instance Ord ModDep where
 extractDeps :: ModDep -> IO ModDep
 extractDeps md@ModDep { mdLocation = Nothing } = return md
 extractDeps md@ModDep { mdLocation = Just f } = withUTF8FileContents f $ \con -> do
-  let findImports acc (('{':'#':xs):xxs) = case (dropWhile (' ' ==) xs) of
+  let findImports acc (('{':'#':xs):xxs) = case dropWhile (' ' ==) xs of
         ('i':'m':'p':'o':'r':'t':' ':ys) ->
           case simpleParse (takeWhile ('#' /=) ys) of
             Just m -> findImports (m:acc) xxs
